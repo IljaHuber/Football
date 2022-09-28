@@ -10,15 +10,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Match {
+    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_RESET = "\u001B[0m";
+    public static final String ANSI_BLUE = "\u001B[34m";
+    public static final String ANSI_GREEN = "\u001B[32m";
+    public static final String ANSI_PURPLE = "\u001B[35m";
     private Player ballPossessingPlayer = null;
     private int ballPosition = 2;
     private int goalOne = 0;
     private int goalTwo = 4;
     private int playTime = 270;
     private Map<Team, Integer> matchScore = new HashMap<>();
-    private Map<Team, Integer> goalPosition = new HashMap<>();
+    private Map<Team, Integer> goalPositionMap = new HashMap<>();
     private Map<Team, String> teamSymbolMap = new HashMap<>();
+    private Map<String, Team> positionTeamMap = new HashMap<>();
     private Team[] teams;
+    private boolean goalConverted = false;
 
     public Match(Team teamOne, Team teamTwo) {
         this.teams = new Team[]{teamOne, teamTwo};
@@ -32,20 +39,16 @@ public class Match {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         boolean game_running = true;
-        Team bM = new Team("Bayern ");
-        Team vfb = new Team("Stuttgart ");
+        Team bM = new Team("Bayern");
+        Team vfb = new Team("Stuttgart");
         Match finalMatch = new Match(bM, vfb);
         finalMatch.setStartingPosition(bM, vfb);
-        finalMatch.ballPossessingPlayer = finalMatch.getStartingTeam(bM, vfb).getRandomAttacker();
+        finalMatch.ballPossessingPlayer = finalMatch.getStartingTeam(bM, vfb).getRandomMidfield();
         for(int i = 0; i < finalMatch.playTime; i++){
             Player passer = finalMatch.ballPossessingPlayer;
-            finalMatch.ballPossessingPlayer = finalMatch.ballPossessingPlayer.handleBall(finalMatch.checkBallPosition());
-            if (passer.getPlayersTeam() == finalMatch.ballPossessingPlayer.getPlayersTeam()){
-                finalMatch.ballPosition += finalMatch.goalPosition.get(passer.getPlayersTeam());
-            }
-            finalMatch.showMatchState();
+            finalMatch.ballPossessingPlayer = finalMatch.ballPossessingPlayer.handleBall();
         }
         System.out.println();
         finalMatch.printScore();
@@ -60,26 +63,20 @@ public class Match {
     }
     private void setStartingPosition(Team teamOne, Team teamTwo) {
         if (Math.random() < 0.5){
-            goalPosition.put(teamOne, - 1);
-            teamSymbolMap.put(teamOne, "x");
-            goalPosition.put(teamTwo, 1);
-            teamSymbolMap.put(teamTwo, "o");
+            goalPositionMap.put(teamOne, - 1);
+            teamSymbolMap.put(teamOne, ANSI_GREEN + "x" + ANSI_RESET);
+            positionTeamMap.put("left", teamOne);
+            goalPositionMap.put(teamTwo, 1);
+            teamSymbolMap.put(teamTwo, ANSI_BLUE + "o" + ANSI_RESET);
+            positionTeamMap.put("right", teamTwo);
         }else{
-            goalPosition.put(teamOne, 1);
-            teamSymbolMap.put(teamTwo, "x");
-            goalPosition.put(teamTwo, - 1);
-            teamSymbolMap.put(teamOne, "o");
+            goalPositionMap.put(teamOne, 1);
+            teamSymbolMap.put(teamOne, ANSI_GREEN + "o" + ANSI_RESET);
+            positionTeamMap.put("right", teamOne);
+            goalPositionMap.put(teamTwo, - 1);
+            teamSymbolMap.put(teamTwo, ANSI_BLUE + "x" + ANSI_RESET);
+            positionTeamMap.put("left", teamTwo);
         }
-    }
-    private boolean checkBallPosition () {
-        if ((goalPosition.get(ballPossessingPlayer.getPlayersTeam()) == -1) && (ballPosition == goalOne)) {
-            System.out.println("Possible to shoot a Goal ");
-            return true;
-        } else if ((goalPosition.get(ballPossessingPlayer.getPlayersTeam()) == 1) && (ballPosition == goalTwo)) {
-            System.out.println("Possible to shoot a Goal ");
-            return true;
-        }
-        return false;
     }
 
     public Map<Team, Integer> getMatchScore() {
@@ -96,63 +93,81 @@ public class Match {
         }
     }
 
+    public void setGoalConverted(boolean goalConverted) {
+        this.goalConverted = goalConverted;
+    }
+
     public void setBallPosition(int ballPosition) {
         this.ballPosition = ballPosition;
     }
 
-    private void showMatchState(){
+    public void showMatchState() throws InterruptedException {
+        int sleepTime;
+        int passTime = 500;
+        int goalTime = 2000;
+        String displayMessage = "";
         int fieldWidth = 11;
-        int fieldHeight = 3;
+        int fieldHeight = 4;
         String[][] matchState = new String[fieldWidth][fieldHeight];
         Map<Player, int[]> playerPositionMap = new HashMap<>();
         for (Team team: teams){
             for(Player player: team.getTeamMembers()){
-                int teamsGoalPosition = goalPosition.get(team);
+                int teamsGoalPosition = goalPositionMap.get(team);
                 int middleColumn = 5;
+                int[] pos = new int[2];
                     if(player instanceof Goalkeeper){
-                        int[] pos = new int[]{middleColumn + teamsGoalPosition * 5, 1};
+                        pos = new int[]{middleColumn + teamsGoalPosition * 5, 1};
                         playerPositionMap.put(player, pos);
-                        matchState[pos[0]][pos[1]] = teamSymbolMap.get(player.getPlayersTeam());
                     } else if (player instanceof Defender) {
-                        int[] pos = new int[]{middleColumn + teamsGoalPosition * 4, Integer.parseInt(player.getName())};
+                        pos = new int[]{middleColumn + teamsGoalPosition * 4, Integer.parseInt(player.getName())};
                         playerPositionMap.put(player, pos);
-                        matchState[pos[0]][pos[1]] = teamSymbolMap.get(player.getPlayersTeam());
                     } else if (player instanceof MiddleField) {
-                        if(Integer.parseInt(player.getName()) > 1 ) {
-                            int pos[];
-                            if(Integer.parseInt(player.getName()) == 2){
-                                pos = new int[]{middleColumn + teamsGoalPosition * - 1, Integer.parseInt(player.getName()) - 2};
-                            }else{
-                                pos = new int[]{middleColumn + teamsGoalPosition * - 1, Integer.parseInt(player.getName()) - 1};
-                            }
-                            playerPositionMap.put(player, pos);
-                            matchState[pos[0]][pos[1]] = teamSymbolMap.get(player.getPlayersTeam());
-                        }else {
-                            int pos[];
-                            if(Integer.parseInt(player.getName()) == 1){
-                                pos = new int[]{middleColumn + teamsGoalPosition * 2, Integer.parseInt(player.getName())};
-                            }else{
-                                pos = new int[]{middleColumn + teamsGoalPosition * 2, Integer.parseInt(player.getName()) + 1};
-                            }
-                            playerPositionMap.put(player, pos);
-                            matchState[pos[0]][pos[1]] = teamSymbolMap.get(player.getPlayersTeam());
-
-                        }
-                    } else if (player instanceof Attacker) {
-                        int[] pos = new int[]{middleColumn + teamsGoalPosition * -3, Integer.parseInt(player.getName())};
+                        pos = new int[]{middleColumn + teamsGoalPosition, Integer.parseInt(player.getName())};
                         playerPositionMap.put(player, pos);
-                        matchState[pos[0]][pos[1]] = teamSymbolMap.get(player.getPlayersTeam());
+                    } else if (player instanceof Attacker) {
+                        pos = new int[]{middleColumn + teamsGoalPosition * -3, Integer.parseInt(player.getName())};
+                        playerPositionMap.put(player, pos);
                     }
+                matchState[pos[0]][pos[1]] = teamSymbolMap.get(player.getPlayersTeam());
                 }
             }
+        String space = "\n \n \n \n \n \n \n \n \n \n \n \n \n \n \n\n \n \n \n \n \n \n \n \n \n \n \n";
+        System.out.println(space);
+        String header = "";
+        header += "     " + positionTeamMap.get("left")+ " " + matchScore.get(positionTeamMap.get("left")) + " : " + matchScore.get(positionTeamMap.get("right")) + " " + positionTeamMap.get("right") + "\n";
+        System.out.println(header);
+        if (goalConverted){
+            sleepTime = goalTime;
+            goalConverted = false;
+            displayMessage = ballPossessingPlayer.getPlayersTeam().toString() + " shot a GOOOOOOAAAAALLLL !!!!";
+            if(ballPossessingPlayer.getPlayersTeam() == teams[1]){
+                displayMessage = ANSI_BLUE + displayMessage + ANSI_RESET;
+            }else{
+                displayMessage = ANSI_GREEN + displayMessage + ANSI_RESET;
+            }
+        }
+        else {
+            sleepTime = passTime;
+            displayMessage = ballPossessingPlayer + " has now the ball ";
+
+            if(ballPossessingPlayer.getPlayersTeam() == teams[1]){
+                displayMessage = ANSI_BLUE + displayMessage + ANSI_RESET;
+            }else{
+                displayMessage = ANSI_GREEN + displayMessage + ANSI_RESET;
+            }
+        }
         for (int j = 0; j < fieldHeight; j++) {
             String row = "";
+            int asserted_i = -1;
+            int asserted_j = -1;
             for (int i = 0; i < fieldWidth; i++) {
-                if (playerPositionMap.get(ballPossessingPlayer)[0] == j && playerPositionMap.get(ballPossessingPlayer)[0] == i){
+                if ((playerPositionMap.get(ballPossessingPlayer)[0] == i) && (playerPositionMap.get(ballPossessingPlayer)[1] == j)){
                     if(matchState[i][j] == null){
                         row += "   ";
                     }else {
-                        row += " " + matchState[i][j].toUpperCase() + " ";
+                        row += " " + ANSI_RED + "@" + ANSI_RESET + " ";
+                        asserted_i = i;
+                        asserted_j = j;
                     }
                 }else {
                     if (matchState[i][j] == null){
@@ -162,8 +177,15 @@ public class Match {
                     }
                 }
             }
+            if (j == 1){
+                row += "        " + displayMessage;
+            }
             System.out.println(row + "\n");
         }
+        if (goalConverted){
+
+        }
+        Thread.sleep(sleepTime);
     }
 
 }

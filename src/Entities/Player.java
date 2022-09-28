@@ -6,10 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Player {
-    private Match match;
-    private Team playersTeam;
-    private double passProbability;
-    private double conversionProbability;
+    protected Match match;
+    protected Team playersTeam;
+    protected double passProbability;
+    protected double conversionProbability;
     private String name;
     public Player (double passProbability, double conversionProbability, Team playersTeam, String name) {
         this.passProbability = passProbability;
@@ -18,67 +18,28 @@ public abstract class Player {
         this.name = name;
 
     }
-    public Player pass () {
-        if(Math.random() > passProbability) {
-            List<Player> teamMembersList = new ArrayList<>();
-            for (Player player : playersTeam.getTeamMembers()){
-                if((player != this) && !(player instanceof Goalkeeper)){
-                    teamMembersList.add(player);
-                }
-            }
-            Player target = teamMembersList.get((int)(Math.random() * 9));
-            System.out.println(this + " passed to teammate " + target);
-            return target;
+
+    public Player pass() throws InterruptedException {
+        match.showMatchState();
+        List<Player> targetList;
+        if(Math.random() < passProbability) {
+            targetList = getAlliedTargetList();
         }
         else {
-            Team enemyTeam = playersTeam.getOpposingTeam();
-            List<Player> enemyFieldPlayers = new ArrayList<>();
-            for (Player player : enemyTeam.getTeamMembers()){
-                if (!(player instanceof Goalkeeper)){
-                    enemyFieldPlayers.add(player);
-                }
-            }
-            Player target = enemyFieldPlayers.get((int)(Math.random() * 10));
-            System.out.println(this + " failed his pass. " + target + " has now the ball.");
-            return target;
+            targetList = getEnemyTargetList();
         }
-    }
-    public Player shoot () {
-        if(Math.random() < conversionProbability) {
-            logGoal();
-            match.setBallPosition(2);
-            return this.playersTeam.getOpposingTeam().getRandomAttacker();
-
-        }
-        else {
-            return this.playersTeam.getOpposingTeam().getGoalkeeper();
-        }
-    }
-
-    private void logGoal() {
-        System.out.println("Goal");
-        int newScore = match.getMatchScore().get(this.getPlayersTeam()) + 1;
-        match.getMatchScore().put(this.getPlayersTeam(), newScore);
-        System.out.println(this + " Shot a goal");
-        match.printScore();
+        return targetList.get((int)(Math.random() * targetList.size()));
     }
 
     public String getName() {
         return name;
     }
-
     public Team getPlayersTeam() {
         return playersTeam;
     }
-    public Player handleBall (boolean canShoot) {
-        if(canShoot) {
-            return shoot();
-        }
-        else{
-            return pass();
-        }
-    }
-
+    protected abstract List<Player> getAlliedTargetList();
+    protected abstract List<Player> getEnemyTargetList();
+    public abstract Player handleBall () throws InterruptedException;
     public void setMatchPlayed(Match match) {
         this.match = match;
     }

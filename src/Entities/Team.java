@@ -2,6 +2,7 @@ package Entities;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class Team {
     private String name;
@@ -11,6 +12,7 @@ public class Team {
     private List<MiddleField> middleFielders = new ArrayList<>();
     private List<Defender> defenders = new ArrayList<>();
     private Goalkeeper goalkeeper = new Goalkeeper(this, Integer.toString(0));
+    private List<Player> fieldPlayers = new ArrayList<>();
 
     public Team(String name) {
         this.name = name;
@@ -39,7 +41,7 @@ public class Team {
 
     private void fillPlayerList() {
         for (int i = 0; i < 3; i++){
-            attackers.add(new Attacker(this, Integer.toString(i)));
+            attackers.add(new Attacker(this, Integer.toString(i), 0.4 + Math.random() * 0.2));
         }
         for (int i = 0; i < 4; i++){
             middleFielders.add(new MiddleField(this, Integer.toString(i)));
@@ -47,9 +49,10 @@ public class Team {
         for (int i = 0; i < 3; i++){
             defenders.add(new Defender(this, Integer.toString(i)));
         }
-        teamMembers.addAll(attackers);
-        teamMembers.addAll(middleFielders);
-        teamMembers.addAll(defenders);
+        fieldPlayers.addAll(attackers);
+        fieldPlayers.addAll(middleFielders);
+        fieldPlayers.addAll(defenders);
+        teamMembers.addAll(fieldPlayers);
         teamMembers.add(goalkeeper);
     }
 
@@ -65,11 +68,15 @@ public class Team {
         return name;
     }
 
+    public List<Player> getFieldPlayers() {
+        return fieldPlayers;
+    }
+
     @Override
     public String toString() {
         return this.name;
     }
-    public Attacker getRandomAttacker () {
-        return attackers.get((int)(Math.random() * 3));
+    public MiddleField getRandomMidfield () {
+        return middleFielders.get((int)(Math.random() * 3));
     }
 }
